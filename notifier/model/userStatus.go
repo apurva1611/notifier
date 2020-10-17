@@ -1,9 +1,11 @@
 package model
 
-type UserStatus struct {
-	userID      string
-	alertStatus string
-	//ENUM('silent', 'alerted', 'threshold') COLLATE utf8_unicode_ci NOT NULL,
+import "time"
 
-	lastAlertSentTS string
+type UserStatus struct {
+	UserID      string
+	AlertStatus string
+	//ENUM('silent', 'alerted') COLLATE utf8_unicode_ci NOT NULL,
+
+	LastAlertSentTS time.Time
 }

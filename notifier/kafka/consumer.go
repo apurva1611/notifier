@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"notifier/db"
+	"notifier/model"
 	"strings"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -62,17 +65,11 @@ func deleteOrphanAlerts(weatherTopicData model.WeatherTopicData) {
 		}
 	}
 	inputNotifierAlertIDs = strings.TrimRight(inputNotifierAlertIDs, ",")
-	if err != nil {
-		log.Print(err.Error())
-		continue
-	}
+
 	log.Print(inputNotifierAlertIDs)
 
 	db.DeleteAlertsByZipcodeNotInInputSet(weatherTopicData.Zipcode, inputNotifierAlertIDs)
-	if err != nil {
-		log.Print(err.Error())
-		continue
-	}
+
 }
 
 // 2. now loop over all the alerts from the weatherTopicData
@@ -82,82 +79,94 @@ func deleteOrphanAlerts(weatherTopicData model.WeatherTopicData) {
 // 		with current TS
 // 		if alert_triggered is set to false then set alert_status to NOT_TRIGGERED
 func updateAlertTableFromInputWeatherTopicData(weatherTopicData model.WeatherTopicData) {
+	arriveTS := time.Now()
 
 	for i := range weatherTopicData.Watchs {
+		db.InsertUser(weatherTopicData.Watchs[i].UserId)
+
 		for j := range weatherTopicData.Watchs[i].Alerts {
 			notifierAlert := model.NotifierAlert{}
-			notifierAlert.alertID = weatherTopicData.Watchs[i].Alerts[j].ID
-			notifierAlert.zipcode = weatherTopicData.Zipcode
-			notifierAlert.watchID = weatherTopicData.Watchs[i].ID
-			notifierAlert.userID = weatherTopicData.Watchs[i].UserId
-			notifierAlert.alertTriggered = false
-			notifierAlert.fieldType = weatherTopicData.Watchs[i].Alerts[j].FieldType
-			notifierAlert.operator = weatherTopicData.Watchs[i].Alerts[j].Operator
-			notifierAlert.value = weatherTopicData.Watchs[i].Alerts[j].Value
+			notifierAlert.AlertID = weatherTopicData.Watchs[i].Alerts[j].ID
+			notifierAlert.Zipcode = weatherTopicData.Zipcode
+			notifierAlert.WatchID = weatherTopicData.Watchs[i].ID
+			notifierAlert.UserID = weatherTopicData.Watchs[i].UserId
+			notifierAlert.AlertTriggered = false
+			notifierAlert.FieldType = weatherTopicData.Watchs[i].Alerts[j].FieldType
+			notifierAlert.Operator = weatherTopicData.Watchs[i].Alerts[j].Operator
+			notifierAlert.Value = weatherTopicData.Watchs[i].Alerts[j].Value
 
 			db.InsertAlert(notifierAlert)
-			if err != nil {
-				log.Print(err.Error())
-				continue
-			}
-			db.updateAlertBasedOnWeatherData(notifierAlert, weatherTopicData.WeatherData.Main)
-			if err != nil {
-				log.Print(err.Error())
-				continue
-			}
+
+			updateAlertBasedOnWeatherData(notifierAlert, weatherTopicData.WeatherData, arriveTS)
 		}
 	}
 
 }
 
-func updateAlertBasedOnWeatherData(notifierAlert model.NotifierAlert, weather model.WeatherTopicData.WeatherData) {
-	var data
-	switch notifierAlert.fieldType {
-		case "temp":
-			data = weather.Main.Temp
-		case "feels_like":
-			data = main.feels_like
-		case "temp_min":
-			data = main.temp_min
-		case "temp_max":
-			data = main.temp_max
-		case "pressure":
-			data = main.pressure
-		case "humidity":
-			data = main.humidity
+func updateAlertBasedOnWeatherData(notifierAlert model.NotifierAlert, weather model.Weather, arriveTS time.Time) {
+	var data float32
+	switch notifierAlert.FieldType {
+	case "temp":
+		data = weather.Main.Temp
+	case "feels_like":
+		data = weather.Main.FeelsLike
+	case "temp_min":
+		data = weather.Main.TempMin
+	case "temp_max":
+		data = weather.Main.TempMax
+	case "pressure":
+		data = weather.Main.Pressure
+	case "humidity":
+		data = weather.Main.Humidity
 
 	}
 
-	var result
-	switch notifierAlert.operator {
-		case "gt":
-			result = data > notifierAlert.value 
-		case "gte":
-			result = data >= notifierAlert.value 
-		case "eq":
-			result = data == notifierAlert.value
-		case "lt":
-			result = data < notifierAlert.value 
-		case "lte":
-			result = data <= notifierAlert.value 
-
+	var result bool
+	switch notifierAlert.Operator {
+	case "gt":
+		result = data > notifierAlert.Value
+	case "gte":
+		result = data >= notifierAlert.Value
+	case "eq":
+		result = data == notifierAlert.Value
+	case "lt":
+		result = data < notifierAlert.Value
+	case "lte":
+		result = data <= notifierAlert.Value
 	}
 
-	dbnotifieralert := db.getNotifierAlertByAlertID(notifierAlert.alertID)
-	
-	if (result == dbnotifieralert.alertTriggered) {
-		t1 := time.Now()
-		t2 := db.getTriggerUpdateTS(notifierAlert.alertID)
-		t2, err := time.Parse("1000-01-01 00:00:00", t2)
-		if err != nil {
-			panic(err)
-		}
-		diff := t1.sub(t2)
-		if(diff <= 60){
+	dbnotifieralert := db.GetNotifierAlertByAlertID(notifierAlert.AlertID)
 
+	if result == true && true == dbnotifieralert.AlertTriggered {
+
+		triggerUpdateTS := db.GetTriggerUpdateTS(notifierAlert.AlertID)
+		diff := arriveTS.Sub(triggerUpdateTS)
+
+		// if the alert was triggered less than an hour back compared to weather data sent
+		// then this alert can be marked as duplicate
+		if diff.Hours() < 1 {
+			// set alert_status to ALERT_IGNORED_DUPLICATE
+			db.UpdateAlertStatus(notifierAlert.AlertID, "ALERT_IGNORED_DUPLICATE")
+		} else {
+			// update alert trigger_update_ts in db with this -> arriveTS
+			db.UpdateAlertTriggerUpdateTS(notifierAlert.AlertID, arriveTS)
+			// set alert_status to NOT_SENT
+			db.UpdateAlertStatus(notifierAlert.AlertID, "NOT_SENT")
 		}
+	} else if result == false && true == dbnotifieralert.AlertTriggered {
+		// set alert_triggered to false
+		db.UpdateAlertTriggered(notifierAlert.AlertID, false)
+		// set alert_status to NOT_SENT
+		db.UpdateAlertStatus(notifierAlert.AlertID, "NOT_SENT")
+	} else if result == true && false == dbnotifieralert.AlertTriggered {
+		// set alert_triggered to true
+		db.UpdateAlertTriggered(notifierAlert.AlertID, true)
+		// update alert trigger_update_ts with arriveTS
+		db.UpdateAlertTriggerUpdateTS(notifierAlert.AlertID, arriveTS)
+		// set alert_status to NOT_SENT
+		db.UpdateAlertStatus(notifierAlert.AlertID, "NOT_SENT")
+	} else {
+		// when both false do nothing
 	}
 
 }
-
-

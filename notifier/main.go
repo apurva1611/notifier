@@ -41,22 +41,22 @@ func main() {
 	// get kafka writer using environment variables.
 	kafkaURL := os.Getenv("kafkaURL")
 	consumerTopic := os.Getenv("consumerTopic")
-	reader := getKafkaReader(kafkaURL, consumerTopic, "watch-group")
+	reader := getKafkaReader(kafkaURL, consumerTopic, "weather-group")
 	go consume(reader)
 	defer reader.Close()
 
-	fmt.Println("start periodic notifications... !!")
+	fmt.Println("start periodic notifications in every 1 min with user only alerted 1 time/hour... !!")
 	for {
 		time.Sleep(60 * time.Second)
-
-		notificationCount := notifier()
-		fmt.Printf("total notifications sent := %d", notificationCount)
+		notifier()
 	}
 }
 
-func notifier() int {
+func notifier() {
 
 	// cts = current time stamp
+	cts := time.Now()
+
 	// tuts = trigger_update_ts
 	// last = last alert sent ts
 	//
@@ -66,34 +66,68 @@ func notifier() int {
 	// 			then the user can be deleted from the userStatus table
 	// 				and
 	// 				continue to next user (skip below logic)
+	userStatusArr := db.GetAllUserStatus()
+	for i := range userStatusArr {
+		userAlerts := db.GetAlertsByUserId(userStatusArr[i].UserID)
 
-	// 	if there are no 'alerts' from alert table for the given user where alert_triggered = true,
-	// 		then set userStatus.alert_status = 'silent' for the given user
+		if len(userAlerts) == 0 {
+			// if user has no alerts then delete user
+			db.DeleteUser(userStatusArr[i].UserID)
+			continue
+		}
 
-	// 	if (cts - last <= 1 min) {
-	// 		then for every alerts where (alert_status is NOT_TRIGGERED && alert_triggered = true) {
-	// 			set alert.alert_status = ALERT_IGNORED_TRESHOLD_REACHED
-	// 		}
-	// 	} else {
-	// 		case when cts - last > 1 min (meaning more than 1 min has elapsed since user got notified)
-	// 		so now
-	// 		select 'alerts' where (alert_status is NOT_TRIGGERED && alert_triggered = true)
-	// 			in ascending order of tuts
-	// 		then for each alert from 'alerts' {
-	// 			1. if userStatus.alert_status = 'silent'
-	// 				then set alert.alert_status = ALERT_SEND
-	// 					set userStatus.alert_status = 'alerted'
-	// 					set userStatus.last_alert_sent_ts = cts
+		usersActiveAlerts := db.GetAlertsByUserIdWhereAlertIsTriggered(userStatusArr[i].UserID)
 
-	// 			2. if userStatus.alert_status = 'alerted'
-	// 				then set alert.alert_status = ALERT_IGNORED_TRESHOLD_REACHED
-	// 					set userStatus.alert_status = 'threshold'
+		// 	if there are no 'alerts' from alert table for the given user where alert_triggered = true,
+		// 		then set userStatus.alert_status = 'silent' for the given user
+		if len(usersActiveAlerts) == 0 {
+			db.UpdateUserAlertStatus(userStatusArr[i].UserID, "silent")
+			continue
+		}
 
-	// 			3. if userStatus.alert_status = 'threshold'
-	// 				then set alert.alert_status = ALERT_IGNORED_TRESHOLD_REACHED
+		// 	if (cts - last <= 1 min) {
+		// 		then for every alerts where (alert_status is NOT_SENT && alert_triggered = true) {
+		// 			set alert.alert_status = ALERT_IGNORED_TRESHOLD_REACHED
+		// 		}
+		// 	}
+		if cts.Sub(userStatusArr[i].LastAlertSentTS).Hours() <= 1 {
+			for j := range usersActiveAlerts {
+				if usersActiveAlerts[j].AlertStatus == "NOT_SENT" {
+					db.UpdateAlertStatus(usersActiveAlerts[j].AlertID,
+						"ALERT_IGNORED_TRESHOLD_REACHED")
+				}
+			}
+		} else {
+			//case when cts - last > 1 hour (meaning more than 1 hour has elapsed since user got notified)
+			// 		so now
+			// 		select 'alerts' where (alert_status is NOT_SENT && alert_triggered = true)
+			// 			in ascending order of tuts
+			for j := range usersActiveAlerts {
+				if usersActiveAlerts[j].AlertStatus != "NOT_SENT" {
+					continue
+				}
 
-	// 		}
-	// 	}
+				// 		then for each alert from 'alerts' {
+				// 			1. if userStatus.alert_status = 'silent'
+				// 				then set alert.alert_status = ALERT_SEND
+				// 					set userStatus.alert_status = 'alerted'
+				// 					set userStatus.last_alert_sent_ts = cts
+				if userStatusArr[i].AlertStatus == "silent" {
 
-	return 0
+					db.UpdateAlertStatus(usersActiveAlerts[j].AlertID, "ALERT_SEND")
+
+					userStatusArr[i].AlertStatus = "alerted"
+					userStatusArr[i].LastAlertSentTS = cts
+
+					db.UpdateUserAlertStatus(userStatusArr[i].UserID, userStatusArr[i].AlertStatus)
+					db.UpdateUserLastAlertSentTS(userStatusArr[i].UserID, cts)
+				} else {
+					// 	2. if userStatus.alert_status = 'alerted'
+					// 	 then set alert.alert_status = ALERT_IGNORED_TRESHOLD_REACHED
+					db.UpdateAlertStatus(usersActiveAlerts[j].AlertID,
+						"ALERT_IGNORED_TRESHOLD_REACHED")
+				}
+			}
+		}
+	}
 }
