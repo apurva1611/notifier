@@ -176,7 +176,8 @@ func InsertWatch(watch model.WATCH) bool {
 	}
 
 	for _, a := range watch.Alerts {
-		if !insertAlert(a) {
+		// have to convert Alert `a` to NotifierAlert
+		if !InsertAlert(a) {
 			return false
 		}
 	}
@@ -184,7 +185,7 @@ func InsertWatch(watch model.WATCH) bool {
 	return true
 }
 
-func insertAlert(notifierAlert model.NotifierAlert) bool {
+func InsertAlert(notifierAlert model.NotifierAlert) bool {
 	insert, err := db.Prepare(`INSERT INTO notifierdb.alert(alert_id, zipcode, watch_id, user_id, alert_triggered, tigger_update_ts, alert_status, field_type, operator, value) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 
 	if err != nil {
@@ -192,17 +193,17 @@ func insertAlert(notifierAlert model.NotifierAlert) bool {
 		return false
 	}
 	_, err = insert.Exec(
-		notifierAlert.alertID,
-		notifierAlert.zipcode,
-		notifierAlert.userID,
-		notifierAlert.watchID,
+		notifierAlert.AlertID,
+		notifierAlert.Zipcode,
+		notifierAlert.UserID,
+		notifierAlert.WatchID,
 		notifierAlert.Operator,
-		notifierAlert.alertTriggered,
-		notifierAlert.triggerUpdateTS,
-		notifierAlert.alertStatus,
-		notifierAlert.fieldType,
-		notifierAlert.operator,
-		notifierAlert.value)
+		notifierAlert.AlertTriggered,
+		notifierAlert.TriggerUpdateTS,
+		notifierAlert.AlertStatus,
+		notifierAlert.FieldType,
+		notifierAlert.Operator,
+		notifierAlert.Value)
 
 	if err != nil {
 		log.Printf(err.Error())
@@ -212,58 +213,59 @@ func insertAlert(notifierAlert model.NotifierAlert) bool {
 	return true
 }
 
-func getNotifierAlertByAlertID(alertID string) model.NotifierAlert {
+func GetNotifierAlertByAlertID(alertID string) *model.NotifierAlert {
 	notifierAlert := model.NotifierAlert{}
 
-	err := db.QueryRow(`SELECT alert_id, zipcode, watch_id, user_id, alert_triggered, tigger_update_ts, alert_status, field_type, operator, value FROM notifierdb.alert WHERE alert_id = ?`, alertId).Scan(
-		&notifierAlert.alertID,
-		&notifierAlert.zipcode,
-		&notifierAlert.watchID,
-		&notifierAlert.userID,
-		&notifierAlert.alertTriggered,
-		&notifierAlert.triggerUpdateTS,
-		&notifierAlert.alertStatus,
-		&notifierAlert.fieldType,
-		&notifierAlert.operator,
-		&notifierAlert.value)
+	err := db.QueryRow(`SELECT alert_id, zipcode, watch_id, user_id, alert_triggered, tigger_update_ts, alert_status, field_type, operator, value FROM notifierdb.alert WHERE alert_id = ?`, alertID).Scan(
+		&notifierAlert.AlertID,
+		&notifierAlert.Zipcode,
+		&notifierAlert.WatchID,
+		&notifierAlert.UserID,
+		&notifierAlert.AlertTriggered,
+		&notifierAlert.TriggerUpdateTS,
+		&notifierAlert.AlertStatus,
+		&notifierAlert.FieldType,
+		&notifierAlert.Operator,
+		&notifierAlert.Value)
 	if err != nil {
 		log.Printf(err.Error())
 		return nil
 	}
 
-	return notifierAlert
+	return &notifierAlert
 }
 
-func updateNotifierAlertByAlertID(alertID string) model.NotifierAlert {
+func updateNotifierAlertByAlertID(alertID string) *model.NotifierAlert {
 	notifierAlert := model.NotifierAlert{}
 
-	err := db.QueryRow(`SELECT alert_id, zipcode, watch_id, user_id, alert_triggered, tigger_update_ts, alert_status, field_type, operator, value FROM notifierdb.alert WHERE alert_id = ?`, alertId).Scan(
-		&notifierAlert.alertID,
-		&notifierAlert.zipcode,
-		&notifierAlert.watchID,
-		&notifierAlert.userID,
-		&notifierAlert.alertTriggered,
-		&notifierAlert.triggerUpdateTS,
-		&notifierAlert.alertStatus,
-		&notifierAlert.fieldType,
-		&notifierAlert.operator,
-		&notifierAlert.value)
+	err := db.QueryRow(`SELECT alert_id, zipcode, watch_id, user_id, alert_triggered, tigger_update_ts, alert_status, field_type, operator, value FROM notifierdb.alert WHERE alert_id = ?`, alertID).Scan(
+		&notifierAlert.AlertID,
+		&notifierAlert.Zipcode,
+		&notifierAlert.WatchID,
+		&notifierAlert.UserID,
+		&notifierAlert.AlertTriggered,
+		&notifierAlert.TriggerUpdateTS,
+		&notifierAlert.AlertStatus,
+		&notifierAlert.FieldType,
+		&notifierAlert.Operator,
+		&notifierAlert.Value)
 	if err != nil {
 		log.Printf(err.Error())
 		return nil
 	}
 
-	return notifierAlert
+	return &notifierAlert
 }
 
-func getTriggerUpdateTS(alertID string) string {
+func GetTriggerUpdateTS(alertID string) string {
+	notifierAlert := model.NotifierAlert{}
 
-	notifierTriggerUpdateTS, err := db.QueryRow(`SELECT trigger_update_ts FROM notifierdb.alert WHERE alert_id = ?`, alertId).Scan(&notifierAlert.triggerUpdateTS)
+	err := db.QueryRow(`SELECT trigger_update_ts FROM notifierdb.alert WHERE alert_id = ?`, alertID).Scan(&notifierAlert.TriggerUpdateTS)
+
 	if err != nil {
-		log.Printf(err.Error())
-		return nil
+		return ""
 	}
-	return notifierTriggerUpdateTS
+	return notifierAlert.TriggerUpdateTS
 }
 
 func updateTriggerUpdateTS(alertID string, updatedTriggeredTS string) bool {
@@ -275,31 +277,39 @@ func updateTriggerUpdateTS(alertID string, updatedTriggeredTS string) bool {
 		return false
 	}
 
-	update, err := db.Exec(updatedTriggeredTS, alertID)
-
-	return true
-}
-
-func getAlertTrigger(alertID string) string {
-
-	notifierAlertTrigger, err := db.QueryRow(`SELECT alert_triggerd FROM notifierdb.alert WHERE alert_id = ?`, alertId).Scan(&notifierAlert.alertTriggered)
-	if err != nil {
-		log.Printf(err.Error())
-		return nil
-	}
-	return notifierAlertTrigger
-}
-
-func updateUserAlertStatus(userID string, userAlertStatus bool) bool {
-
-	_, err := db.Prepare(`UPDATE notifierdb.userStatus SET alert_status=? WHERE user_id=? VALUES (?, ?)`)
-
+	_, err = db.Exec(updatedTriggeredTS, alertID)
 	if err != nil {
 		log.Printf(err.Error())
 		return false
 	}
 
-	update, err := db.Exec(userAlertStatus, userID)
+	return true
+}
+
+func getAlertTrigger(alertID string) bool {
+	notifierAlert := model.NotifierAlert{}
+
+	err := db.QueryRow(`SELECT alert_triggerd FROM notifierdb.alert WHERE alert_id = ?`, alertID).Scan(&notifierAlert.AlertTriggered)
+	if err != nil {
+		log.Printf(err.Error())
+		return false
+	}
+	return notifierAlert.AlertTriggered
+}
+
+func updateUserAlertStatus(userID string, userAlertStatus string) bool {
+
+	_, err := db.Prepare(`UPDATE notifierdb.userStatus SET alert_status=? WHERE user_id=? VALUES (?, ?)`)
+	if err != nil {
+		log.Printf(err.Error())
+		return false
+	}
+
+	_, err = db.Exec(userAlertStatus, userID)
+	if err != nil {
+		log.Printf(err.Error())
+		return false
+	}
 
 	return true
 }
