@@ -6,9 +6,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/tarekbadrshalaan/GoKafka/kafka-go/db"
-	"github.com/tarekbadrshalaan/GoKafka/kafka-go/model"
-
 	"github.com/segmentio/kafka-go"
 )
 

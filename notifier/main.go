@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"notifier/db"
 	"os"
 	"strings"
 	"time"
-
-	"github.com/tarekbadrshalaan/GoKafka/kafka-go/db"
 
 	kafka "github.com/segmentio/kafka-go"
 )

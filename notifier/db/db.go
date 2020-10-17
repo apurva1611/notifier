@@ -11,7 +11,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
-	"github.com/tarekbadrshalaan/GoKafka/kafka-go/model"
 )
 
 var db *sql.DB
@@ -185,7 +184,7 @@ func InsertWatch(watch model.WATCH) bool {
 	return true
 }
 
-func InsertAlert(notifierAlert model.NotifierAlert) bool {
+func insertAlert(notifierAlert model.NotifierAlert) bool {
 	insert, err := db.Prepare(`INSERT INTO notifierdb.alert(alert_id, zipcode, watch_id, user_id, alert_triggered, tigger_update_ts, alert_status, field_type, operator, value) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 
 	if err != nil {
@@ -213,19 +212,18 @@ func InsertAlert(notifierAlert model.NotifierAlert) bool {
 	return true
 }
 
-func getNotifierAlertByAlertID(string alertID) model.NotifierAlert {
+func getNotifierAlertByAlertID(alertID string) model.NotifierAlert {
 	notifierAlert := model.NotifierAlert{}
 
-	err := db.QueryRow(`SELECT alert_id, zipcode, watch_id, user_id, alert_triggered, tigger_update_ts, alert_status, field_type, operator, value FROM notifierdb.alert WHERE alert_id = ?`, alertId)
-	.Scan(
-		&notifierAlert.alertID, 
-		&notifierAlert.zipcode, 
-		&notifierAlert.watchID, 
-		&notifierAlert.userID, 
-		&notifierAlert.alertTriggered, 
-		&notifierAlert.triggerUpdateTS, 
-		&notifierAlert.alertStatus, 
-		&notifierAlert.fieldType, 
+	err := db.QueryRow(`SELECT alert_id, zipcode, watch_id, user_id, alert_triggered, tigger_update_ts, alert_status, field_type, operator, value FROM notifierdb.alert WHERE alert_id = ?`, alertId).Scan(
+		&notifierAlert.alertID,
+		&notifierAlert.zipcode,
+		&notifierAlert.watchID,
+		&notifierAlert.userID,
+		&notifierAlert.alertTriggered,
+		&notifierAlert.triggerUpdateTS,
+		&notifierAlert.alertStatus,
+		&notifierAlert.fieldType,
 		&notifierAlert.operator,
 		&notifierAlert.value)
 	if err != nil {
@@ -239,16 +237,15 @@ func getNotifierAlertByAlertID(string alertID) model.NotifierAlert {
 func updateNotifierAlertByAlertID(alertID string) model.NotifierAlert {
 	notifierAlert := model.NotifierAlert{}
 
-	err := db.QueryRow(`SELECT alert_id, zipcode, watch_id, user_id, alert_triggered, tigger_update_ts, alert_status, field_type, operator, value FROM notifierdb.alert WHERE alert_id = ?`, alertId)
-	.Scan(
-		&notifierAlert.alertID, 
-		&notifierAlert.zipcode, 
-		&notifierAlert.watchID, 
-		&notifierAlert.userID, 
-		&notifierAlert.alertTriggered, 
-		&notifierAlert.triggerUpdateTS, 
-		&notifierAlert.alertStatus, 
-		&notifierAlert.fieldType, 
+	err := db.QueryRow(`SELECT alert_id, zipcode, watch_id, user_id, alert_triggered, tigger_update_ts, alert_status, field_type, operator, value FROM notifierdb.alert WHERE alert_id = ?`, alertId).Scan(
+		&notifierAlert.alertID,
+		&notifierAlert.zipcode,
+		&notifierAlert.watchID,
+		&notifierAlert.userID,
+		&notifierAlert.alertTriggered,
+		&notifierAlert.triggerUpdateTS,
+		&notifierAlert.alertStatus,
+		&notifierAlert.fieldType,
 		&notifierAlert.operator,
 		&notifierAlert.value)
 	if err != nil {
@@ -271,7 +268,7 @@ func getTriggerUpdateTS(alertID string) string {
 
 func updateTriggerUpdateTS(alertID string, updatedTriggeredTS string) bool {
 
-	update, err := db.Prepare(`UPDATE notifierdb.alert SET trigger_update_ts=? WHERE alert_id=? VALUES (?, ?)`)
+	_, err := db.Prepare(`UPDATE notifierdb.alert SET trigger_update_ts=? WHERE alert_id=? VALUES (?, ?)`)
 
 	if err != nil {
 		log.Printf(err.Error())
@@ -295,7 +292,7 @@ func getAlertTrigger(alertID string) string {
 
 func updateUserAlertStatus(userID string, userAlertStatus bool) bool {
 
-	update, err := db.Prepare(`UPDATE notifierdb.userStatus SET alert_status=? WHERE user_id=? VALUES (?, ?)` )
+	_, err := db.Prepare(`UPDATE notifierdb.userStatus SET alert_status=? WHERE user_id=? VALUES (?, ?)`)
 
 	if err != nil {
 		log.Printf(err.Error())
@@ -306,5 +303,3 @@ func updateUserAlertStatus(userID string, userAlertStatus bool) bool {
 
 	return true
 }
-
-
