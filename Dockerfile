@@ -5,16 +5,16 @@ ENV GO111MODULE=on
 
 WORKDIR /app/
 
-COPY notifier-app/go.mod .
-COPY notifier-app/go.sum .
+COPY notifier/go.mod .
+COPY notifier/go.sum .
 
 RUN go mod download
 
-COPY notifier-app/ .
+COPY notifier/ .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o notifier-app
+RUN CGO_ENABLED=0 GOOS=linux go build -o notifier
 
 # final stage
 FROM scratch
-COPY --from=builder app/notifier-app /app/
-ENTRYPOINT ["/app/notifier-app"]
+COPY --from=builder app/notifier /app/
+ENTRYPOINT ["/app/notifier"]
