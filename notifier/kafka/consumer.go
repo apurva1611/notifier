@@ -69,7 +69,10 @@ func deleteOrphanAlerts(weatherTopicData model.WeatherTopicData) {
 	log.Print(inputNotifierAlertIDs)
 
 	db.DeleteAlertsByZipcodeNotInInputSet(weatherTopicData.Zipcode, inputNotifierAlertIDs)
+<<<<<<< HEAD
 
+=======
+>>>>>>> a6d3867ed984bc8746b0e48b06e0c39cd618183b
 }
 
 // 2. now loop over all the alerts from the weatherTopicData
@@ -97,12 +100,17 @@ func updateAlertTableFromInputWeatherTopicData(weatherTopicData model.WeatherTop
 
 			db.InsertAlert(notifierAlert)
 
+<<<<<<< HEAD
 			updateAlertBasedOnWeatherData(notifierAlert, weatherTopicData.WeatherData, arriveTS)
+=======
+			updateAlertBasedOnWeatherData(notifierAlert, weatherTopicData)
+>>>>>>> a6d3867ed984bc8746b0e48b06e0c39cd618183b
 		}
 	}
 
 }
 
+<<<<<<< HEAD
 func updateAlertBasedOnWeatherData(notifierAlert model.NotifierAlert, weather model.Weather, arriveTS time.Time) {
 	var data float32
 	switch notifierAlert.FieldType {
@@ -133,11 +141,56 @@ func updateAlertBasedOnWeatherData(notifierAlert model.NotifierAlert, weather mo
 		result = data < notifierAlert.Value
 	case "lte":
 		result = data <= notifierAlert.Value
+=======
+func updateAlertBasedOnWeatherData(notifierAlert model.NotifierAlert, weather model.WeatherTopicData) {
+	var data float32
+	switch notifierAlert.FieldType {
+	case "temp":
+		data = weather.WeatherData.Main.Temp
+	case "feels_like":
+		data = weather.WeatherData.Main.FeelsLike
+	case "temp_min":
+		data = weather.WeatherData.Main.TempMin
+	case "temp_max":
+		data = weather.WeatherData.Main.TempMax
+	case "pressure":
+		data = float32(weather.WeatherData.Main.Pressure)
+	case "humidity":
+		data = float32(weather.WeatherData.Main.Humidity)
+	}
+
+	var result bool
+	val := float32(notifierAlert.Value)
+	switch notifierAlert.Operator {
+	case "gt":
+		result = data > val
+	case "gte":
+		result = data >= val
+	case "eq":
+		result = data == val
+	case "lt":
+		result = data < val
+	case "lte":
+		result = data <= val
+
+>>>>>>> a6d3867ed984bc8746b0e48b06e0c39cd618183b
 	}
 
 	dbnotifieralert := db.GetNotifierAlertByAlertID(notifierAlert.AlertID)
 
+<<<<<<< HEAD
 	if result == true && true == dbnotifieralert.AlertTriggered {
+=======
+	if result == dbnotifieralert.AlertTriggered {
+		t1 := time.Now()
+		t2 := db.GetTriggerUpdateTS(notifierAlert.AlertID)
+		t3, err := time.Parse("1000-01-01 00:00:00", t2)
+		if err != nil {
+			panic(err)
+		}
+		diff := t1.Sub(t3)
+		if diff <= 60 {
+>>>>>>> a6d3867ed984bc8746b0e48b06e0c39cd618183b
 
 		triggerUpdateTS := db.GetTriggerUpdateTS(notifierAlert.AlertID)
 		diff := arriveTS.Sub(triggerUpdateTS)
