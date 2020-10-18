@@ -1,6 +1,6 @@
 node {
 
-    def registry = "apurvamathur/notifier" 
+    def registry = "apurvamathur/webapp-notifier" 
     def registryCredential = 'apurvamathur'
     def commit_id = ''
 	def dockerImage = ''
