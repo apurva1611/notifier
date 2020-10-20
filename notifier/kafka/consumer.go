@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"notifier/db"
 	"notifier/model"
@@ -24,7 +25,9 @@ func getKafkaReader(kafkaURL, topic, groupID string) *kafka.Reader {
 }
 
 func Consume(kafkaURL, topic, groupID string) {
+	fmt.Println("getting kafka reader")
 	reader := getKafkaReader(kafkaURL, topic, groupID)
+	fmt.Println("got kafka reader")
 	defer reader.Close()
 	for {
 		m, err := reader.ReadMessage(context.Background())
@@ -42,9 +45,10 @@ func Consume(kafkaURL, topic, groupID string) {
 		}
 
 		log.Print(weatherTopicData)
-
+		fmt.Println("deleting orphan alerts")
 		deleteOrphanAlerts(weatherTopicData)
-
+		fmt.Println("insert weathertopicdata")
+		updateAlertTableFromInputWeatherTopicData(weatherTopicData)
 	}
 }
 
@@ -67,8 +71,21 @@ func deleteOrphanAlerts(weatherTopicData model.WeatherTopicData) {
 	inputNotifierAlertIDs = strings.TrimRight(inputNotifierAlertIDs, ",")
 
 	log.Print(inputNotifierAlertIDs)
-
+	fmt.Println("deleting orphan alerts")
 	db.DeleteAlertsByZipcodeNotInInputSet(weatherTopicData.Zipcode, inputNotifierAlertIDs)
+
+	// s := strings.Split(inputNotifierAlertIDs, ",")
+	// fmt.Println(s)
+
+	// for k := range s {
+	// 	notifierAlert := model.NotifierAlert{}
+	// 	fmt.Println(s[k])
+	// 	notifierAlert = *db.GetNotifierAlertByAlertID(s[k])
+
+	// 	fmt.Println("inserting notifierAlert")
+	// 	db.InsertAlert(notifierAlert)
+	// }
+
 }
 
 // 2. now loop over all the alerts from the weatherTopicData
@@ -79,8 +96,14 @@ func deleteOrphanAlerts(weatherTopicData model.WeatherTopicData) {
 // 		if alert_triggered is set to false then set alert_status to NOT_TRIGGERED
 func updateAlertTableFromInputWeatherTopicData(weatherTopicData model.WeatherTopicData) {
 	arriveTS := time.Now()
-
+	fmt.Println("arriveTS")
+	fmt.Println(arriveTS)
 	for i := range weatherTopicData.Watchs {
+		out, _ := json.Marshal(weatherTopicData.Watchs[i])
+		fmt.Println(string(out))
+		fmt.Printf("userID in notifier" + weatherTopicData.Watchs[i].UserId)
+		log.Print(weatherTopicData.Watchs[i].UserId)
+		fmt.Println("inserting userid")
 		db.InsertUser(weatherTopicData.Watchs[i].UserId)
 
 		for j := range weatherTopicData.Watchs[i].Alerts {
@@ -90,12 +113,14 @@ func updateAlertTableFromInputWeatherTopicData(weatherTopicData model.WeatherTop
 			notifierAlert.WatchID = weatherTopicData.Watchs[i].ID
 			notifierAlert.UserID = weatherTopicData.Watchs[i].UserId
 			notifierAlert.AlertTriggered = false
+			notifierAlert.TriggerUpdateTS = arriveTS
+			notifierAlert.AlertStatus = "NOT_SENT"
 			notifierAlert.FieldType = weatherTopicData.Watchs[i].Alerts[j].FieldType
 			notifierAlert.Operator = weatherTopicData.Watchs[i].Alerts[j].Operator
 			notifierAlert.Value = weatherTopicData.Watchs[i].Alerts[j].Value
-
+			fmt.Println("inserting alert")
 			db.InsertAlert(notifierAlert)
-
+			fmt.Println("updating alert based on weatherdata")
 			updateAlertBasedOnWeatherData(notifierAlert, weatherTopicData.WeatherData, arriveTS)
 		}
 	}
