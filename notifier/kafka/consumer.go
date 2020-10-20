@@ -96,8 +96,11 @@ func deleteOrphanAlerts(weatherTopicData model.WeatherTopicData) {
 // 		if alert_triggered is set to false then set alert_status to NOT_TRIGGERED
 func updateAlertTableFromInputWeatherTopicData(weatherTopicData model.WeatherTopicData) {
 	arriveTS := time.Now()
+	defaultTS := arriveTS.AddDate(-3, 0, 0)
+
 	fmt.Println("arriveTS")
 	fmt.Println(arriveTS)
+
 	for i := range weatherTopicData.Watchs {
 		out, _ := json.Marshal(weatherTopicData.Watchs[i])
 		fmt.Println(string(out))
@@ -113,7 +116,7 @@ func updateAlertTableFromInputWeatherTopicData(weatherTopicData model.WeatherTop
 			notifierAlert.WatchID = weatherTopicData.Watchs[i].ID
 			notifierAlert.UserID = weatherTopicData.Watchs[i].UserId
 			notifierAlert.AlertTriggered = false
-			notifierAlert.TriggerUpdateTS = arriveTS
+			notifierAlert.TriggerUpdateTS = defaultTS
 			notifierAlert.AlertStatus = "NOT_SENT"
 			notifierAlert.FieldType = weatherTopicData.Watchs[i].Alerts[j].FieldType
 			notifierAlert.Operator = weatherTopicData.Watchs[i].Alerts[j].Operator

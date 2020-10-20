@@ -153,7 +153,7 @@ func DeleteUser(userId string) {
 }
 
 func UpdateUserAlertStatus(userId string, alertStatus string) {
-	update, err := db.Prepare(`UPDATE notifierdb.userStatus SET alert_status=? WHERE user_id=? VALUES (?, ?)`)
+	update, err := db.Prepare(`UPDATE notifierdb.userStatus SET alert_status=? WHERE user_id=?`)
 
 	update.Exec(alertStatus, userId)
 	if err != nil {
@@ -162,7 +162,7 @@ func UpdateUserAlertStatus(userId string, alertStatus string) {
 }
 
 func UpdateUserLastAlertSentTS(userId string, lastAlertSentTS time.Time) {
-	update, err := db.Prepare(`UPDATE notifierdb.userStatus SET last_alert_sent_ts=? WHERE user_id=? VALUES (?, ?)`)
+	update, err := db.Prepare(`UPDATE notifierdb.userStatus SET last_alert_sent_ts=? WHERE user_id=?`)
 
 	update.Exec(lastAlertSentTS, userId)
 	if err != nil {
