@@ -33,6 +33,6 @@ node {
 	stage('Remove Unused docker image') {
 		/* Cleaning from local machine */
 		//sh "docker rmi -f `docker images -q`"
-		 sh "docker rmi -f `docker images | grep webapp | awk '{print \$3}'`"
+		 sh "docker rmi -f `docker images | grep notifier | awk '{print \$3}'`"
 	}
 }
