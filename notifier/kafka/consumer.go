@@ -172,7 +172,7 @@ func updateAlertBasedOnWeatherData(notifierAlert model.NotifierAlert, weather mo
 
 		// if the alert was triggered less than an hour back compared to weather data sent
 		// then this alert can be marked as duplicate
-		if diff.Hours() < 1 {
+		if diff.Minutes() < 5 {
 			// set alert_status to ALERT_IGNORED_DUPLICATE
 			fmt.Println("but diff less than one hour then alert_ignored_dup")
 			db.UpdateAlertStatus(notifierAlert.AlertID, "ALERT_IGNORED_DUPLICATE")

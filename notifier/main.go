@@ -2,10 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"notifier/db"
 	"notifier/kafka"
 	"os"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 // func getKafkaReader(kafkaURL, consumerTopic, groupID string) *kafka.Reader {
@@ -31,6 +35,9 @@ import (
 // }
 
 func main() {
+	router := SetupRouter()
+	log.Fatal(router.Run(":8080"))
+
 	db.Init()
 	defer db.CloseDB()
 
@@ -49,6 +56,17 @@ func main() {
 		time.Sleep(60 * time.Second)
 		notifier()
 	}
+}
+
+func SetupRouter() *gin.Engine {
+	router := gin.Default()
+	v1 := router.Group("/v1")
+	v1.GET("/healthcheck", healthcheck)
+	return router
+}
+
+func healthcheck(c *gin.Context) {
+	c.JSON(http.StatusOK, "ok")
 }
 
 func notifier() {
@@ -89,7 +107,7 @@ func notifier() {
 		// 			set alert.alert_status = ALERT_IGNORED_TRESHOLD_REACHED
 		// 		}
 		// 	}
-		if cts.Sub(userStatusArr[i].LastAlertSentTS).Hours() <= 1 {
+		if cts.Sub(userStatusArr[i].LastAlertSentTS).Minutes() <= 5 {
 			for j := range usersActiveAlerts {
 				if usersActiveAlerts[j].AlertStatus == "NOT_SENT" {
 					db.UpdateAlertStatus(usersActiveAlerts[j].AlertID,
