@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"notifier/db"
 	"notifier/kafka"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -39,7 +38,7 @@ func main() {
 	defer db.CloseDB()
 
 	// get kafka writer using environment variables.
-	kafkaURL := os.Getenv("kafkaURL")
+	kafkaURL := "kafka:9092"
 	consumerTopic := "weather"
 	consumerGroup := "weather-group"
 
