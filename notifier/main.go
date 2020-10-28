@@ -35,9 +35,6 @@ import (
 // }
 
 func main() {
-	router := SetupRouter()
-	log.Fatal(router.Run(":8080"))
-
 	db.Init()
 	defer db.CloseDB()
 
@@ -52,10 +49,16 @@ func main() {
 
 	//fmt.Printf("consumer topic: " + consumerTopic)
 	fmt.Println("start periodic notifications in every 1 min with user only alerted 1 time/hour... !!")
-	for {
-		time.Sleep(60 * time.Second)
-		notifier()
-	}
+	go func() {
+		for {
+			time.Sleep(60 * time.Second)
+			notifier()
+		}
+	}()
+
+	router := SetupRouter()
+	log.Fatal(router.Run(":8080"))
+
 }
 
 func SetupRouter() *gin.Engine {
