@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"notifier/db"
 	"notifier/model"
@@ -24,7 +25,9 @@ func getKafkaReader(kafkaURL, topic, groupID string) *kafka.Reader {
 }
 
 func Consume(kafkaURL, topic, groupID string) {
+	fmt.Println("getting kafka reader")
 	reader := getKafkaReader(kafkaURL, topic, groupID)
+	fmt.Println("got kafka reader")
 	defer reader.Close()
 	for {
 		m, err := reader.ReadMessage(context.Background())
@@ -42,9 +45,10 @@ func Consume(kafkaURL, topic, groupID string) {
 		}
 
 		log.Print(weatherTopicData)
-
+		fmt.Println("deleting orphan alerts")
 		deleteOrphanAlerts(weatherTopicData)
-
+		fmt.Println("insert weathertopicdata")
+		updateAlertTableFromInputWeatherTopicData(weatherTopicData)
 	}
 }
 
@@ -67,8 +71,21 @@ func deleteOrphanAlerts(weatherTopicData model.WeatherTopicData) {
 	inputNotifierAlertIDs = strings.TrimRight(inputNotifierAlertIDs, ",")
 
 	log.Print(inputNotifierAlertIDs)
-
+	fmt.Println("deleting orphan alerts")
 	db.DeleteAlertsByZipcodeNotInInputSet(weatherTopicData.Zipcode, inputNotifierAlertIDs)
+
+	// s := strings.Split(inputNotifierAlertIDs, ",")
+	// fmt.Println(s)
+
+	// for k := range s {
+	// 	notifierAlert := model.NotifierAlert{}
+	// 	fmt.Println(s[k])
+	// 	notifierAlert = *db.GetNotifierAlertByAlertID(s[k])
+
+	// 	fmt.Println("inserting notifierAlert")
+	// 	db.InsertAlert(notifierAlert)
+	// }
+
 }
 
 // 2. now loop over all the alerts from the weatherTopicData
@@ -79,8 +96,17 @@ func deleteOrphanAlerts(weatherTopicData model.WeatherTopicData) {
 // 		if alert_triggered is set to false then set alert_status to NOT_TRIGGERED
 func updateAlertTableFromInputWeatherTopicData(weatherTopicData model.WeatherTopicData) {
 	arriveTS := time.Now()
+	defaultTS := arriveTS.AddDate(-3, 0, 0)
+
+	fmt.Println("arriveTS")
+	fmt.Println(arriveTS)
 
 	for i := range weatherTopicData.Watchs {
+		out, _ := json.Marshal(weatherTopicData.Watchs[i])
+		fmt.Println(string(out))
+		fmt.Printf("userID in notifier" + weatherTopicData.Watchs[i].UserId)
+		log.Print(weatherTopicData.Watchs[i].UserId)
+		fmt.Println("inserting userid")
 		db.InsertUser(weatherTopicData.Watchs[i].UserId)
 
 		for j := range weatherTopicData.Watchs[i].Alerts {
@@ -89,13 +115,15 @@ func updateAlertTableFromInputWeatherTopicData(weatherTopicData model.WeatherTop
 			notifierAlert.Zipcode = weatherTopicData.Zipcode
 			notifierAlert.WatchID = weatherTopicData.Watchs[i].ID
 			notifierAlert.UserID = weatherTopicData.Watchs[i].UserId
-			notifierAlert.AlertTriggered = false
+			notifierAlert.AlertTriggered = true
+			notifierAlert.TriggerUpdateTS = defaultTS
+			notifierAlert.AlertStatus = "NOT_SENT"
 			notifierAlert.FieldType = weatherTopicData.Watchs[i].Alerts[j].FieldType
 			notifierAlert.Operator = weatherTopicData.Watchs[i].Alerts[j].Operator
 			notifierAlert.Value = weatherTopicData.Watchs[i].Alerts[j].Value
-
+			fmt.Println("inserting alert")
 			db.InsertAlert(notifierAlert)
-
+			fmt.Println("updating alert based on weatherdata")
 			updateAlertBasedOnWeatherData(notifierAlert, weatherTopicData.WeatherData, arriveTS)
 		}
 	}
@@ -135,29 +163,36 @@ func updateAlertBasedOnWeatherData(notifierAlert model.NotifierAlert, weather mo
 	}
 
 	dbnotifieralert := db.GetNotifierAlertByAlertID(notifierAlert.AlertID)
-
-	if result == true && true == dbnotifieralert.AlertTriggered {
-
+	fmt.Println("updating alert based on userdata")
+	fmt.Println(dbnotifieralert.AlertTriggered)
+	if result == true && dbnotifieralert.AlertTriggered == true {
+		fmt.Println("if weatherdata/result and alert triggered true")
 		triggerUpdateTS := db.GetTriggerUpdateTS(notifierAlert.AlertID)
 		diff := arriveTS.Sub(triggerUpdateTS)
 
 		// if the alert was triggered less than an hour back compared to weather data sent
 		// then this alert can be marked as duplicate
-		if diff.Hours() < 1 {
+		if diff.Minutes() < 5 {
 			// set alert_status to ALERT_IGNORED_DUPLICATE
+			fmt.Println("but diff less than one hour then alert_ignored_dup")
 			db.UpdateAlertStatus(notifierAlert.AlertID, "ALERT_IGNORED_DUPLICATE")
 		} else {
+			fmt.Println("but if not less than one hour then update alert trigger ts and alert status")
 			// update alert trigger_update_ts in db with this -> arriveTS
 			db.UpdateAlertTriggerUpdateTS(notifierAlert.AlertID, arriveTS)
 			// set alert_status to NOT_SENT
 			db.UpdateAlertStatus(notifierAlert.AlertID, "NOT_SENT")
 		}
-	} else if result == false && true == dbnotifieralert.AlertTriggered {
+	} else if result == false && dbnotifieralert.AlertTriggered == true {
+		fmt.Println("if weatherdata/result false and alert triggered true")
+		fmt.Println("then update alert trigger to false and alert status to notsent")
 		// set alert_triggered to false
 		db.UpdateAlertTriggered(notifierAlert.AlertID, false)
 		// set alert_status to NOT_SENT
 		db.UpdateAlertStatus(notifierAlert.AlertID, "NOT_SENT")
-	} else if result == true && false == dbnotifieralert.AlertTriggered {
+	} else if result == true && dbnotifieralert.AlertTriggered == false {
+		fmt.Println("if weatherdata/result true and alert triggered false")
+		fmt.Println("then update alert trigger to true and alert status to notsent and trigger ts to arrivets")
 		// set alert_triggered to true
 		db.UpdateAlertTriggered(notifierAlert.AlertID, true)
 		// update alert trigger_update_ts with arriveTS
@@ -166,6 +201,7 @@ func updateAlertBasedOnWeatherData(notifierAlert model.NotifierAlert, weather mo
 		db.UpdateAlertStatus(notifierAlert.AlertID, "NOT_SENT")
 	} else {
 		// when both false do nothing
+		fmt.Println("do nothing if alert data and weatherdata false")
 	}
 
 }

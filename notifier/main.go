@@ -1,55 +1,74 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"notifier/db"
-	"os"
-	"strings"
+	"notifier/kafka"
 	"time"
 
-	kafka "github.com/segmentio/kafka-go"
+	"github.com/gin-gonic/gin"
 )
 
-func getKafkaReader(kafkaURL, consumerTopic, groupID string) *kafka.Reader {
-	brokers := strings.Split(kafkaURL, ",")
-	return kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  brokers,
-		GroupID:  groupID,
-		Topic:    consumerTopic,
-		MinBytes: 10e3, // 10KB
-		MaxBytes: 10e6, // 10MB
-	})
-}
+// func getKafkaReader(kafkaURL, consumerTopic, groupID string) *kafka.Reader {
+// 	brokers := strings.Split(kafkaURL, ",")
+// 	return kafka.NewReader(kafka.ReaderConfig{
+// 		Brokers:  brokers,
+// 		GroupID:  groupID,
+// 		Topic:    consumerTopic,
+// 		MinBytes: 10e3, // 10KB
+// 		MaxBytes: 10e6, // 10MB
+// 	})
+// }
 
-func consume(reader *kafka.Reader) {
-	fmt.Println("notifier start consuming ... !!")
-	for {
-		m, err := reader.ReadMessage(context.Background())
-		if err != nil {
-			log.Fatalln(err)
-		}
-		fmt.Printf("notifier read message at topic:%v partition:%v offset:%v \n	%s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
-	}
-}
+// func consume(reader *kafka.Reader) {
+// 	fmt.Println("notifier start consuming ... !!")
+// 	for {
+// 		m, err := reader.ReadMessage(context.Background())
+// 		if err != nil {
+// 			log.Fatalln(err)
+// 		}
+// 		fmt.Printf("notifier read message at topic:%v partition:%v offset:%v \n	%s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
+// 	}
+// }
 
 func main() {
 	db.Init()
 	defer db.CloseDB()
 
 	// get kafka writer using environment variables.
-	kafkaURL := os.Getenv("kafkaURL")
-	consumerTopic := os.Getenv("consumerTopic")
-	reader := getKafkaReader(kafkaURL, consumerTopic, "weather-group")
-	go consume(reader)
-	defer reader.Close()
+	kafkaURL := "kafka:9092"
+	consumerTopic := "weather"
+	consumerGroup := "weather-group"
 
+	fmt.Println("starting to consume")
+	go kafka.Consume(kafkaURL, consumerTopic, consumerGroup)
+	//defer reader.Close()
+
+	//fmt.Printf("consumer topic: " + consumerTopic)
 	fmt.Println("start periodic notifications in every 1 min with user only alerted 1 time/hour... !!")
-	for {
-		time.Sleep(60 * time.Second)
-		notifier()
-	}
+	go func() {
+		for {
+			time.Sleep(60 * time.Second)
+			notifier()
+		}
+	}()
+
+	router := SetupRouter()
+	log.Fatal(router.Run(":8080"))
+
+}
+
+func SetupRouter() *gin.Engine {
+	router := gin.Default()
+	v1 := router.Group("/v1")
+	v1.GET("/healthcheck", healthcheck)
+	return router
+}
+
+func healthcheck(c *gin.Context) {
+	c.JSON(http.StatusOK, "ok")
 }
 
 func notifier() {
@@ -85,12 +104,12 @@ func notifier() {
 			continue
 		}
 
-		// 	if (cts - last <= 1 min) {
+		// 	if (cts - last <= 1 hour) {
 		// 		then for every alerts where (alert_status is NOT_SENT && alert_triggered = true) {
 		// 			set alert.alert_status = ALERT_IGNORED_TRESHOLD_REACHED
 		// 		}
 		// 	}
-		if cts.Sub(userStatusArr[i].LastAlertSentTS).Hours() <= 1 {
+		if cts.Sub(userStatusArr[i].LastAlertSentTS).Minutes() <= 5 {
 			for j := range usersActiveAlerts {
 				if usersActiveAlerts[j].AlertStatus == "NOT_SENT" {
 					db.UpdateAlertStatus(usersActiveAlerts[j].AlertID,
