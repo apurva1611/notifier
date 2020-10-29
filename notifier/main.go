@@ -35,16 +35,16 @@ import (
 // }
 
 func main() {
+	// get kafka writer using environment variables.
+	kafkaURL := "kafka:9092"
+	consumerTopic := "weather"
+	consumerGroup := "weather-group"
+
 	router := SetupRouter()
 	log.Fatal(router.Run(":8080"))
 
 	db.Init()
 	defer db.CloseDB()
-
-	// get kafka writer using environment variables.
-	kafkaURL := os.Getenv("kafkaURL")
-	consumerTopic := "weather"
-	consumerGroup := "weather-group"
 
 	fmt.Println("starting to consume")
 	go kafka.Consume(kafkaURL, consumerTopic, consumerGroup)
@@ -61,11 +61,27 @@ func main() {
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
 	v1 := router.Group("/v1")
-	v1.GET("/healthcheck", healthcheck)
+	v1.GET("/healthcheck", healthCheck)
 	return router
 }
 
-func healthcheck(c *gin.Context) {
+func healthCheck(c *gin.Context) {
+	kafkaURL := "kafka:9092"
+	err := db.HealthCheck()
+	if err != nil {
+
+		c.JSON(http.StatusInternalServerError, "db health check failed.")
+		os.Exit(5)
+	}
+
+	err = kafka.KafkaHealthCheck(kafkaURL)
+
+	if err != nil {
+
+		c.JSON(http.StatusInternalServerError, "kafka health check failed.")
+		os.Exit(6)
+	}
+
 	c.JSON(http.StatusOK, "ok")
 }
 

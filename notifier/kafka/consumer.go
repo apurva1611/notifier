@@ -13,6 +13,16 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+func KafkaHealthCheck(kafkaURL string) error {
+	conn, err := kafka.Dial("tcp", kafkaURL)
+	if err != nil {
+		return err
+	}
+
+	conn.Close()
+	return nil
+}
+
 func getKafkaReader(kafkaURL, topic, groupID string) *kafka.Reader {
 	brokers := strings.Split(kafkaURL, ",")
 	return kafka.NewReader(kafka.ReaderConfig{

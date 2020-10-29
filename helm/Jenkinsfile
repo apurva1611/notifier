@@ -44,7 +44,7 @@ def helmInstallNotifier (notifierReleaseName) {
 
 node {
      def changedFiles
-     def image = "achirashah/notifier:notifier"
+     def image = 
      def notifierReleaseName = "notifier"
      def kubernetesCredentials = 'KubeCreds'
 

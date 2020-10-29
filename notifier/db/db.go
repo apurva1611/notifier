@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"notifier/model"
+	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -16,7 +17,7 @@ var db *sql.DB
 const (
 	username = "root"
 	password = "pass1234"
-	hostname = "mysql:3306"
+	port     = ":3306"
 	dbname   = "notifierdb"
 )
 
@@ -26,6 +27,8 @@ func Init() {
 }
 
 func dsn() string {
+	rdsurl := os.Getenv("rdsurl")
+	hostname := rdsurl + port
 	return fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", username, password, hostname, dbname)
 }
 
@@ -40,6 +43,14 @@ func openDB() {
 
 func CloseDB() {
 	db.Close()
+}
+
+func HealthCheck() error {
+	err := db.Ping()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func createDb() {
