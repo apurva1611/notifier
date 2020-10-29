@@ -35,16 +35,13 @@ import (
 // }
 
 func main() {
+	db.Init()
+	defer db.CloseDB()
+
 	// get kafka writer using environment variables.
 	kafkaURL := "kafka:9092"
 	consumerTopic := "weather"
 	consumerGroup := "weather-group"
-
-	router := SetupRouter()
-	log.Fatal(router.Run(":8080"))
-
-	db.Init()
-	defer db.CloseDB()
 
 	fmt.Println("starting to consume")
 	go kafka.Consume(kafkaURL, consumerTopic, consumerGroup)
@@ -52,10 +49,16 @@ func main() {
 
 	//fmt.Printf("consumer topic: " + consumerTopic)
 	fmt.Println("start periodic notifications in every 1 min with user only alerted 1 time/hour... !!")
-	for {
-		time.Sleep(60 * time.Second)
-		notifier()
-	}
+	go func() {
+		for {
+			time.Sleep(60 * time.Second)
+			notifier()
+		}
+	}()
+
+	router := SetupRouter()
+	log.Fatal(router.Run(":8080"))
+
 }
 
 func SetupRouter() *gin.Engine {
