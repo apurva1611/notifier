@@ -13,7 +13,7 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-func KafkaHealthCheck(kafkaURL string) error {
+func HealthCheck(kafkaURL string) error {
 	conn, err := kafka.Dial("tcp", kafkaURL)
 	if err != nil {
 		return err
