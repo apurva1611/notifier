@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"notifier/db"
 	"notifier/kafka"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -57,17 +58,30 @@ func main() {
 
 	router := SetupRouter()
 	log.Fatal(router.Run(":8080"))
-
 }
 
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
 	v1 := router.Group("/v1")
-	v1.GET("/healthcheck", healthcheck)
+	v1.GET("/healthcheck", healthCheck)
 	return router
 }
 
-func healthcheck(c *gin.Context) {
+func healthCheck(c *gin.Context) {
+	kafkaURL := "kafka:9092"
+	err := db.HealthCheck()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "db health check failed.")
+		os.Exit(5)
+	}
+
+	err = kafka.HealthCheck(kafkaURL)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "kafka health check failed.")
+		os.Exit(6)
+	}
+
 	c.JSON(http.StatusOK, "ok")
 }
 
