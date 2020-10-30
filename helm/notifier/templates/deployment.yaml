@@ -9,7 +9,7 @@ spec:
   selector:
     matchLabels:
       {{- include "notifier.selectorLabels" . | nindent 6 }}
-strategy:
+  strategy:
     type: {{ .Values.deployment.type }}
     rollingUpdate:
       maxSurge: 1
