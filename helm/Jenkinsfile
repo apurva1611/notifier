@@ -68,8 +68,6 @@ node {
                 helmInstallNotifier(notifierReleaseName)
             }
         }
-
-    }
     catch (Exception err){
             err_msg = "Test had Exception(${err})"
             currentBuild.result = 'FAILURE'
