@@ -1,7 +1,7 @@
 node {
 
-    def registry = "apurvamathur/webapp-notifier" 
-    def registryCredential = 'apurvamathur'
+    def registryCredential = 'DockerHub'
+    def githubCredential = 'GitHub'
     def commit_id = ''
 	def dockerImage = ''
 
@@ -15,7 +15,7 @@ node {
 		* docker build on the command line */
         commit_id = sh(returnStdout: true, script: 'git rev-parse HEAD')
   		echo "$commit_id"
-        dockerImage = docker.build registry
+        dockerImage = docker.build ("${env.registry}")
 
 	}
 	stage('Tag and Register image') {
@@ -33,6 +33,6 @@ node {
 	stage('Remove Unused docker image') {
 		/* Cleaning from local machine */
 		//sh "docker rmi -f `docker images -q`"
-		 sh "docker rmi -f `docker images | grep webapp | awk '{print \$3}'`"
+		 sh "docker rmi -f `docker images | grep notifier | awk '{print \$3}'`"
 	}
 }
