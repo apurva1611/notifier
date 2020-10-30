@@ -42,29 +42,13 @@ def helmInstallNotifier (notifierReleaseName) {
     }
 }
 
-/*
-    Helm install webapp application
-*/
-def helmFindingWebappIP (webappReleaseName) {
-    echo "Finding IP of Webapp application"
-
-    script {
-       sh "sleep 50"
-       echo "Finding webapp ip"
-       webappIp = sh(returnStdout: true, script: "kubectl describe services webapp --namespace=api | grep elb.amazonaws.com | grep LoadBalancer | awk '{print \$3}' | tr -d '\n'")
-       echo "${webappIp}"
-    }
-}
-
 node {
-
      def notifierReleaseName = "notifier"
 
 
     stage('Clone repository') {
         /* Cloning the Repository to our Workspace */
         checkout scm
-
 
         sh "export aws_access_key_id=${env.awsKey}"
         sh "export aws_secret_access_key=${env.awsSecret}"
@@ -84,7 +68,9 @@ node {
                 helmInstallNotifier(notifierReleaseName)
             }
         }
-        catch (Exception err){
+
+    }
+    catch (Exception err){
             err_msg = "Test had Exception(${err})"
             currentBuild.result = 'FAILURE'
             error "FAILED - Stopping build for Error(${err_msg})"
