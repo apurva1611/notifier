@@ -54,9 +54,9 @@ dependencies:
         
 configmap:
   name: env-config
-  RDS_DB_NAME: notifierdb  
-  S3_BUCKET_NAME: mynotifierbucket
-  REGION: us-east-1
+  RDS_DB_NAME: notifierdb
+  REGION: us-east-1  
+  S3_BUCKET_NAME: 
   rdsurl:
 
 secret:
