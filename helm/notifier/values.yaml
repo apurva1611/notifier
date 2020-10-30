@@ -9,7 +9,7 @@ namespace:
 - api
 
 image:
-  repository: achirashah/webapp-go:notifier
+  repository: 
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
@@ -54,20 +54,21 @@ dependencies:
         
 configmap:
   name: env-config
-  RDS_DB_NAME: notifierdb
+  RDS_DB_NAME: notifierdb  
   S3_BUCKET_NAME: mynotifierbucket
-  REGION: us-east-1   
+  REGION: us-east-1
+  rdsurl:
 
 secret:
   regcred:
     name: regcred
     type: kubernetes.io/dockerconfigjson
-    dockerconfigjson: ewogICAgImF1dGhzIjogewogICAgICAgICJodHRwczovL2luZGV4LmRvY2tlci5pby92MS8iOiB7CiAgICAgICAgICAgICJhdXRoIjogIllXTm9hWEpoYzJoaGFEcEJZMmhwY21FeU1EQT0iCiAgICAgICAgfSwKICAgICAgICAiSHR0cEhlYWRlcnMiOiB7CiAgICAgICAgICAgICJVc2VyLUFnZW50IjogIkRvY2tlci1DbGllbnQvMTkuMDMuMTMgKGRhcndpbikiCiAgICAgICAgfQogICAgfQp9
+    dockerconfigjson: 
   awscred:
     name: awscred
     type: Opaque
-    aws_key: AKIAZQ2HYOLQYKQBRZGK
-    secret_key: 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
+    aws_key: 
+    secret_key: 
   rdscred:
     name: rdscred
     type: Opaque
