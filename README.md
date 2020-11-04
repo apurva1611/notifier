@@ -1,4 +1,2 @@
 # notifier
 demo assignmenta5
-
-
