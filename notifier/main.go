@@ -101,6 +101,8 @@ func notifier() {
 	// 				continue to next user (skip below logic)
 	userStatusArr := db.GetAllUserStatus()
 	for i := range userStatusArr {
+		log.Printf("NOTIFIER user: %s", userStatusArr[i].UserID)
+
 		userAlerts := db.GetAlertsByUserId(userStatusArr[i].UserID)
 
 		if len(userAlerts) == 0 {
@@ -148,6 +150,7 @@ func notifier() {
 				if userStatusArr[i].AlertStatus == "silent" {
 
 					db.UpdateAlertStatus(usersActiveAlerts[j].AlertID, "ALERT_SEND")
+					log.Printf("NOTIFIER user ID: %s, Alert Send", userStatusArr[i].UserID)
 
 					userStatusArr[i].AlertStatus = "alerted"
 					userStatusArr[i].LastAlertSentTS = cts
