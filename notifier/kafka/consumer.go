@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"notifier/db"
 	"notifier/model"
 	"strings"
@@ -45,12 +45,13 @@ func Consume(kafkaURL, topic, groupID string) {
 			continue
 		}
 
-		log.Printf("CONSUME Topic: %s, Message ID %s", topic, string(m.Key))
+		log.Info("CONSUME Topic: %s, Message ID %s", topic, string(m.Key))
 
 		weatherTopicData := model.WeatherTopicData{}
 		err = json.Unmarshal(m.Value, &weatherTopicData)
 		if err != nil {
-			log.Print(err.Error())
+			log.Error("CONSUME Topic: %s, Message ID %s, failed", topic, string(m.Key))
+			log.Error(err.Error())
 			continue
 		}
 
@@ -77,7 +78,7 @@ func deleteOrphanAlerts(weatherTopicData model.WeatherTopicData) {
 	}
 	inputNotifierAlertIDs = strings.TrimRight(inputNotifierAlertIDs, ",")
 
-	log.Print(inputNotifierAlertIDs)
+	log.Info(inputNotifierAlertIDs)
 	fmt.Println("deleting orphan alerts")
 	db.DeleteAlertsByZipcodeNotInInputSet(weatherTopicData.Zipcode, inputNotifierAlertIDs)
 
