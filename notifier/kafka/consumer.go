@@ -45,7 +45,7 @@ func Consume(kafkaURL, topic, groupID string) {
 			continue
 		}
 
-		//log.Print(string(m.Value))
+		log.Printf("CONSUME Topic: %s, Message ID %s", topic, string(m.Key))
 
 		weatherTopicData := model.WeatherTopicData{}
 		err = json.Unmarshal(m.Value, &weatherTopicData)
@@ -54,10 +54,7 @@ func Consume(kafkaURL, topic, groupID string) {
 			continue
 		}
 
-		log.Print(weatherTopicData)
-		fmt.Println("deleting orphan alerts")
 		deleteOrphanAlerts(weatherTopicData)
-		fmt.Println("insert weathertopicdata")
 		updateAlertTableFromInputWeatherTopicData(weatherTopicData)
 	}
 }
