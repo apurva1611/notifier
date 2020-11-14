@@ -39,7 +39,7 @@ func main() {
 	defer db.CloseDB()
 
 	// get kafka writer using environment variables.
-	kafkaURL := "kafka:9092"
+	kafkaURL := "app-prereq-kafka.monitoring:9092"
 	consumerTopic := "weather"
 	consumerGroup := "weather-group"
 
@@ -68,7 +68,7 @@ func SetupRouter() *gin.Engine {
 }
 
 func healthCheck(c *gin.Context) {
-	kafkaURL := "kafka:9092"
+	kafkaURL := "app-prereq-kafka.monitoring:9092"
 	err := db.HealthCheck()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "db health check failed.")
