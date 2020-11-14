@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"notifier/db"
 	"notifier/model"
 	"strings"
@@ -44,20 +44,18 @@ func Consume(kafkaURL, topic, groupID string) {
 		if err != nil {
 			continue
 		}
-
-		//log.Print(string(m.Value))
+		log.Info("CONSUME Topic id:  %s", groupID)
+		log.Info("CONSUME Topic: %s, Message ID %s", topic, string(m.Key))
 
 		weatherTopicData := model.WeatherTopicData{}
 		err = json.Unmarshal(m.Value, &weatherTopicData)
 		if err != nil {
-			log.Print(err.Error())
+			log.Error("CONSUME Topic: %s, Message ID %s, failed", topic, string(m.Key))
+			log.Error(err.Error())
 			continue
 		}
 
-		log.Print(weatherTopicData)
-		fmt.Println("deleting orphan alerts")
 		deleteOrphanAlerts(weatherTopicData)
-		fmt.Println("insert weathertopicdata")
 		updateAlertTableFromInputWeatherTopicData(weatherTopicData)
 	}
 }
@@ -80,7 +78,7 @@ func deleteOrphanAlerts(weatherTopicData model.WeatherTopicData) {
 	}
 	inputNotifierAlertIDs = strings.TrimRight(inputNotifierAlertIDs, ",")
 
-	log.Print(inputNotifierAlertIDs)
+	log.Info("Deleting orphan alerts")
 	fmt.Println("deleting orphan alerts")
 	db.DeleteAlertsByZipcodeNotInInputSet(weatherTopicData.Zipcode, inputNotifierAlertIDs)
 
@@ -114,9 +112,8 @@ func updateAlertTableFromInputWeatherTopicData(weatherTopicData model.WeatherTop
 	for i := range weatherTopicData.Watchs {
 		out, _ := json.Marshal(weatherTopicData.Watchs[i])
 		fmt.Println(string(out))
-		fmt.Printf("userID in notifier" + weatherTopicData.Watchs[i].UserId)
-		log.Print(weatherTopicData.Watchs[i].UserId)
-		fmt.Println("inserting userid")
+		log.Info("userID in notifier" + weatherTopicData.Watchs[i].UserId)
+		log.Info("inserting userid")
 		db.InsertUser(weatherTopicData.Watchs[i].UserId)
 
 		for j := range weatherTopicData.Watchs[i].Alerts {
