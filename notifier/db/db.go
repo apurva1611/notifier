@@ -129,7 +129,7 @@ func queryByID(userId string) bool {
 	err := db.QueryRow(`SELECT user_id FROM notifierdb.userStatus WHERE user_id = ?`, userId).Scan(&userId)
 	if err != nil {
 		log.Error("Get user_id in notififer.userStatus failed")
-		log.Printf(err.Error())
+		log.Error(err.Error())
 		return false
 	}
 	log.Info("Get user_id in notififer.userStatus")
@@ -154,7 +154,7 @@ func InsertUser(userId string) {
 		_, err = insert.Exec(userId)
 		if err != nil {
 			log.Error("Insert user_id in notififer.userStatus failed")
-			log.Printf(err.Error())
+			log.Error(err.Error())
 		}
 		log.Info("Insert user_id in notififer.userStatus")
 	}
@@ -188,7 +188,7 @@ func UpdateUserLastAlertSentTS(userId string, lastAlertSentTS time.Time) {
 	update.Exec(lastAlertSentTS, userId)
 	if err != nil {
 		log.Error("Update query from notififer.userStatus failed")
-		log.Printf(err.Error())
+		log.Error(err.Error())
 	}
 
 		log.Info("Update query from notififer.userStatus")
@@ -224,7 +224,7 @@ func GetAlertsByUserId(userId string) []model.NotifierAlert {
 	results, err := db.Query(`SELECT alert_id, zipcode, watch_id, user_id, alert_triggered, trigger_update_ts, alert_status, field_type, operator, value FROM notifierdb.alert WHERE user_id = ?`, userId)
 	if err != nil {
 		log.Error("Get alert from notififer.alert based on userId failed")
-		log.Printf(err.Error())
+		log.Error(err.Error())
 	}
 
 	for results.Next() {
@@ -285,7 +285,7 @@ func GetAlertsByUserIdWhereAlertIsTriggered(userId string) []model.NotifierAlert
 
 		notifierAlerts = append(notifierAlerts, notifierAlert)
 	}
-    log.Error("Get alerts from notififer.alert based on userId and alert_status=true")
+    log.Info("Get alerts from notififer.alert based on userId and alert_status=true")
 	return notifierAlerts
 }
 
@@ -407,7 +407,7 @@ func GetTriggerUpdateTS(alertID string) time.Time {
 		log.Error("Get trigger_update_ts from notififer.alert based on alert_id")
 		log.Error(err.Error())
 	}
-	log.Error("Get trigger_update_ts from notififer.alert based on alert_id query")
+	log.Info("Get trigger_update_ts from notififer.alert based on alert_id query")
 	return triggerUpdateTS
 }
 
@@ -433,14 +433,17 @@ func UpdateAlertStatus(alertID string, alertStatus string) {
 	update, err1 := db.Prepare(`UPDATE notifierdb.alert SET alert_status=? WHERE alert_id=?`)
 
 	if err1 != nil {
-		log.Printf(err1.Error())
+		log.Error("updating notifier.alert query failed")
+		log.Error(err1.Error())
 	}
 
 	_, err2 := update.Exec(alertStatus, alertID)
 
 	if err2 != nil {
-		log.Printf(err2.Error())
+		log.Error("updating notifier.alert query failed")
+		log.Error(err2.Error())
 	}
+	log.Info(" Update notififer.alert table based on alert_id  and alert_status query")
 }
 
 func UpdateAlertTriggered(alertID string, alertTriggered bool) {
@@ -449,23 +452,28 @@ func UpdateAlertTriggered(alertID string, alertTriggered bool) {
 		fmt.Println("update alert trigger true")
 		update, err1 := db.Prepare(`UPDATE notifierdb.alert SET alert_triggered=true WHERE alert_id=?`)
 		if err1 != nil {
+			log.Error(" Update notififer.alert table based on alert_id  and alert_triggered query failed")
 			log.Printf(err1.Error())
 		}
 		_, err2 := update.Exec(alertID)
 
 		if err2 != nil {
+			log.Error(" Update notififer.alert table based on alert_id  and alert_triggered query failed")
 			log.Printf(err2.Error())
 		}
 	} else {
 		fmt.Println("update alert trigger false")
 		update, err1 := db.Prepare(`UPDATE notifierdb.alert SET alert_triggered=false WHERE alert_id=?`)
 		if err1 != nil {
-			log.Printf(err1.Error())
+			log.Error(" Update notififer.alert table based on alert_id  and alert_triggered query failed")
+			log.Error(err1.Error())
 		}
 		_, err2 := update.Exec(alertID)
 
 		if err2 != nil {
-			log.Printf(err2.Error())
+			log.Error(" Update notififer.alert table based on alert_id  and alert_triggered query failed")
+			log.Error(err2.Error())
 		}
 	}
+	log.Info(" Update notififer.alert table based on alert_id  and alert_triggered query")
 }
