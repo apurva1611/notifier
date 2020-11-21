@@ -69,7 +69,7 @@ func SetupRouter() *gin.Engine {
 }
 
 func healthCheck(c *gin.Context) {
-	kafkaURL := "app-prereq-kafka.monitoring:9092"
+	kafkaURL := "app-prereq-kafka:9092"
 	err := db.HealthCheck()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "db health check failed.")
