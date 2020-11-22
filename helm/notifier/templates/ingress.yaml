@@ -8,11 +8,10 @@ metadata:
     kubernetes.io/tls-acme: "true"
 spec:
   rules:
-  - host: app.prod.apurvamathur.me
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          serviceName: notifier
-          servicePort: 8080
+  http:
+    paths:
+    - path: /
+      pathType: Prefix
+      backend:
+        serviceName: notifier
+        servicePort: 8080
