@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"notifier/model"
 	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -16,9 +17,9 @@ var db *sql.DB
 
 const (
 	username = "root"
-	password = "pass1234"
-	port     = ":3306"
-	dbname   = "notifierdb"
+	password = "Pass1234"
+	// port     = ":3306"
+	dbname = "notifierdb"
 )
 
 func Init() {
@@ -28,7 +29,7 @@ func Init() {
 
 func dsn() string {
 	rdsurl := os.Getenv("rdsurl")
-	hostname := rdsurl + port
+	hostname := rdsurl
 	return fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", username, password, hostname, dbname)
 }
 
@@ -167,7 +168,7 @@ func DeleteUser(userId string) {
 		log.Error("Delete query from notififer.userStatus")
 		log.Error(err.Error())
 	}
-		log.Info("Delete query from notififer.userStatus")
+	log.Info("Delete query from notififer.userStatus")
 }
 
 func UpdateUserAlertStatus(userId string, alertStatus string) {
@@ -179,7 +180,7 @@ func UpdateUserAlertStatus(userId string, alertStatus string) {
 		log.Error(err.Error())
 	}
 
-		log.Info("Update query from notififer.userStatus")
+	log.Info("Update query from notififer.userStatus")
 }
 
 func UpdateUserLastAlertSentTS(userId string, lastAlertSentTS time.Time) {
@@ -191,7 +192,7 @@ func UpdateUserLastAlertSentTS(userId string, lastAlertSentTS time.Time) {
 		log.Error(err.Error())
 	}
 
-		log.Info("Update query from notififer.userStatus")
+	log.Info("Update query from notififer.userStatus")
 }
 
 func GetAllUserStatus() []model.UserStatus {
@@ -285,7 +286,7 @@ func GetAlertsByUserIdWhereAlertIsTriggered(userId string) []model.NotifierAlert
 
 		notifierAlerts = append(notifierAlerts, notifierAlert)
 	}
-    log.Info("Get alerts from notififer.alert based on userId and alert_status=true")
+	log.Info("Get alerts from notififer.alert based on userId and alert_status=true")
 	return notifierAlerts
 }
 
@@ -373,7 +374,7 @@ func GetNotifierAlertByAlertID(alertID string) *model.NotifierAlert {
 		log.Error("Get alert from notififer.alert based on alert_id")
 		log.Error(err.Error())
 	}
-    log.Info("Get alert from notififer.alert based on alert_id")
+	log.Info("Get alert from notififer.alert based on alert_id")
 	return &notifierAlert
 }
 
@@ -424,7 +425,7 @@ func UpdateAlertTriggerUpdateTS(alertID string, updatedTriggeredTS time.Time) {
 		log.Error(" Update notififer.alert based on alert_id query failed")
 		log.Error(err2.Error())
 	}
-		log.Info(" Update notififer.alert based on alert_id query")
+	log.Info(" Update notififer.alert based on alert_id query")
 
 }
 
